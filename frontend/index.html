@@ -20,6 +20,8 @@
 const { useState, useRef, useEffect } = React;
 
 const N = 15;
+// Same origin when Flask serves this page (port 5000); otherwise talk to the local Flask server directly.
+const API_BASE = window.location.port === "5000" ? "" : "http://127.0.0.1:5000";
 type Pt = { r: number; c: number };
 type Mode = "wall" | "start" | "goal";
 type Result = { found: boolean; path: Pt[]; explored: Pt[] };
@@ -53,6 +55,7 @@ function App() {
   const [seen, setSeen] = useState(0);
   const [step, setStep] = useState(-1);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const painting = useRef<"add" | "remove" | null>(null);
   const timer = useRef(0);
 
@@ -62,7 +65,7 @@ function App() {
     return () => { window.removeEventListener("mouseup", up); clearTimeout(timer.current); };
   }, []);
 
-  const reset = () => { clearTimeout(timer.current); setBusy(false); setRes(null); setSeen(0); setStep(-1); };
+  const reset = () => { clearTimeout(timer.current); setBusy(false); setRes(null); setSeen(0); setStep(-1); setError(null); };
 
   const apply = (r: number, c: number) => {
     if (busy) return;
@@ -85,13 +88,16 @@ function App() {
     reset();
     setBusy(true);
 
-    fetch("http://localhost:5000/api/calculate", {
+    fetch(`${API_BASE}/api/calculate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ walls, start, goal }),
     })
-      .then(response => {
-        if (!response.ok) throw new Error(`Backend request failed: ${response.status}`);
+      .then(async response => {
+        if (!response.ok) {
+          const body = await response.json().catch(() => null);
+          throw new Error(body?.error || `Server error (${response.status})`);
+        }
         return response.json() as Promise<Result>;
       })
       .then(out => {
@@ -107,6 +113,9 @@ function App() {
       })
       .catch(error => {
         console.error("Unable to calculate route:", error);
+        setError(error instanceof TypeError
+          ? "Cannot reach the routing server. Run `python3 app.py` in backend/ (http://127.0.0.1:5000)."
+          : error.message);
         setBusy(false);
       });
   };
@@ -135,9 +144,12 @@ function App() {
     { id: "start", label: "Robot", Ico: Bot },
     { id: "goal", label: "Target", Ico: Pkg },
   ];
-  const status = !res ? "Ready. Shape the floor plan, then calculate."
+  const status = error ? error
     : busy ? "Searching the state space…"
+    : !res ? "Ready. Shape the floor plan, then calculate."
     : res.found ? "Optimal route found." : "No route exists. The target is walled off.";
+  const statusColor = error || (res && !busy && !res.found) ? "text-rose-400"
+    : res && !busy && res.found ? "text-emerald-300" : "text-slate-400";
   const pathLen = res && res.found ? Math.max(step, 0) : 0;
 
   return (
@@ -214,7 +226,7 @@ function App() {
                   <div className="mt-1 text-xs text-slate-500">Path length</div>
                 </div>
               </div>
-              <p className="mt-3 text-sm text-slate-400">{status}</p>
+              <p className={`mt-3 text-sm ${statusColor}`}>{status}</p>
             </section>
 
             <section className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">

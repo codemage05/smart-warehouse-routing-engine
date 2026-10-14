@@ -69,6 +69,8 @@ The service returns:
 
 `found` is `false` and `path` is empty when the open set is exhausted without reaching the target. `explored` remains available so the UI can show how far the search progressed.
 
+If the body is not valid JSON or is missing `walls`, `start`, or `goal`, the service returns `400 Bad Request` with `{"error": "Invalid or missing payload data"}`. The frontend shows this message (or a "cannot reach the routing server" hint on network failure) in red in the Performance panel instead of failing silently.
+
 ## The Manhattan Heuristic
 
 For a cell $n$, the heuristic is:

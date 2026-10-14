@@ -214,6 +214,21 @@ Computes the shortest path from start to goal given a 2D boolean obstacle matrix
 }
 ```
 
+The UI shows **"No route exists. The target is walled off."** in red for this case.
+
+#### Response (Invalid Payload)
+
+* **Status:** `400 Bad Request`
+* **When:** The body is not valid JSON, or `walls`, `start`, or `goal` is missing.
+
+```json
+{
+  "error": "Invalid or missing payload data"
+}
+```
+
+The UI displays the `error` message in the Performance panel. If the server cannot be reached at all, it shows a hint to start `app.py` on port `5000`.
+
 #### Test with cURL
 
 ```bash
@@ -251,14 +266,16 @@ pip install -r requirements.txt
 python app.py
 ```
 
-The backend server will launch at `http://localhost:5000`.
+The backend server will launch at `http://127.0.0.1:5000`.
 
-### 2. Frontend Setup
+### 2. Open the App
 
 The frontend is a single, zero-build HTML document.
 
-#### Option A: Open directly in your browser
-Simply double-click `frontend/index.html` or open it with your favorite browser:
+#### Option A (recommended): Open it through Flask
+With the backend running, visit **`http://127.0.0.1:5000/`**. Flask serves `frontend/index.html` at the root URL, so the UI and API share one address.
+
+#### Option B: Open the file directly in your browser
 ```bash
 # On Linux
 xdg-open frontend/index.html
@@ -270,12 +287,14 @@ open frontend/index.html
 start frontend/index.html
 ```
 
-#### Option B: Serve via a lightweight local server
+#### Option C: Serve via a separate local server
 ```bash
 # Run from the repository root
 python -m http.server 3000
 ```
 Then visit `http://localhost:3000/frontend/` in your browser.
+
+> Options B and C still call the API at `http://127.0.0.1:5000`, so the backend must be running.
 
 ---
 
