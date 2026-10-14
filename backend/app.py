@@ -1,10 +1,18 @@
 import heapq
-from flask import Flask, request, jsonify
+import os
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
+
+FRONTEND_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'frontend')
 
 app = Flask(__name__)
 # Enable CORS so the React frontend can make local requests
 CORS(app)
+
+@app.route('/')
+def index():
+    # Serve the single-page frontend so the whole app runs from one URL
+    return send_from_directory(FRONTEND_DIR, 'index.html')
 
 def heuristic(a, b):
     # Manhattan distance heuristic
@@ -12,12 +20,19 @@ def heuristic(a, b):
 
 @app.route('/api/calculate', methods=['POST'])
 def calculate_path():
-    data = request.json
+    data = request.get_json(silent=True)
+    
+    # --- START OF ERROR HANDLING BLOCK ---
+    if not data or 'walls' not in data or 'start' not in data or 'goal' not in data:
+        return jsonify({"error": "Invalid or missing payload data"}), 400
+    # --- END OF ERROR HANDLING BLOCK ---
+
     walls = data.get('walls')
     start = data.get('start')
     goal = data.get('goal')
     
-    N = len(walls)
+    # Now this is safe, because we proved 'walls' exists!
+    N = len(walls) 
     
     # Priority queue for A* (f_score, row, col)
     open_set = []
